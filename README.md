@@ -1,4 +1,4 @@
-# local AI detection
+# Local AI Detection
 ### Why?
 Every current mainstream AI detector is proprietary. This is no fault of their own, an AI detector which has an open method of detecting AI would be trivially easy to bypass. The only problem is that using these tools will inevitably expose whatever you are writing to the broader internet, and thus comes with its own security risks.
 
