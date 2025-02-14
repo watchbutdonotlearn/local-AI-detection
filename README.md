@@ -30,3 +30,6 @@ Paste in whatever text you want to analyze and hit "run analysis". Once it is fi
 
 ### Todo:
 Add a "full analysis" mode that first sends the input to another LLM, tells that LLM to generate a prompt that would output the input text, and then analyze the generated prompt + input using the existing method
+
+
+Add an overall "percent AI score"
