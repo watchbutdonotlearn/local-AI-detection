@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Detector</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>AI Detector</h1>
+    <textarea id="inputText" placeholder="Enter text here..."></textarea>
+    <button id="runAnalysis">Run Analysis</button>
+    
+    <!-- New Color-Coded Output Box -->
+    <div id="colorCodedResultsBox"></div>
+
+    <!-- Original Output Box -->
+    <div id="resultsBox"></div>
+
+    <!-- Side Panel for Top Logprobs -->
+    <div id="logprobsPanel" class="logprobs-panel">
+      <h3>Top token probabilities</h3>
+      <div id="logprobsContent"></div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
