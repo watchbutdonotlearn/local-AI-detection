@@ -74,8 +74,8 @@ button:hover {
 .logprobs-panel {
   position: fixed;
   top: 0;
-  right: -300px;
-  width: 300px;
+  right: -200px;
+  width: 200px;
   height: 100%;
   background-color: #fff;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
