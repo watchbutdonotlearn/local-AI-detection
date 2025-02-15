@@ -307,10 +307,9 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     var numberSuspiciousZero = 0
     var numberSuspiciousLow = 0
 
-    // Step 2: Analyze each token (skip the first one)
+    // Step 2: Analyze each token
     for (let i = generatedPromptTokenLength; i < tokens.length; i++) {
       const prompt = tokens.slice(0, i).join(''); // All tokens before the current one
-      //console.log("prompt: " + prompt)
       const currentTokenSpaces = tokens[i];
       const currentToken = currentTokenSpaces.replace(/\s/g, '')
 
@@ -346,7 +345,6 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
       const tokenIndex = topLogprobs.findIndex(
         entry => entry.token.replace(/\s/g, '') === currentToken
       );
-      //console.log(tokenIndex)
 
       var topTokenProbability = 0
 
@@ -404,8 +402,6 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
       //await new Promise(resolve => setTimeout(resolve, 1));
     }
 
-    //console.log(suspiciousness)
-
     // Add click event listeners to tokens in the color-coded box
     document.querySelectorAll('#colorCodedResultsBox .token').forEach(token => {
       token.addEventListener('click', () => {
@@ -443,7 +439,6 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     }
 
     topTokenProbListWithoutNull = topTokenProbList.filter(element => {return element !== null;});
-    //console.log(topTokenProbListWithoutNull)
     const averageTokenProbability = averageArray(topTokenProbListWithoutNull)
     const inputTokenLenth = tokens.length - generatedPromptTokenLength
     const suspiciousRatio = numberSuspicious / inputTokenLenth
@@ -451,7 +446,12 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     const nonSusRatio = numberSuspiciousZero / inputTokenLenth
     const nonSusPercent = nonSusRatio * 100
     const nonSuspiciousLowPercent = (numberSuspiciousLow / inputTokenLenth) * 100
-    resultsBox.textContent = `Done! Results:\nTotal tokens: ${tokens.length}\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(4)}%\nPercentage with not in probs list: ${nonSusPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}`;
+
+    const paragraphAnalysis = analyzeParagraphs(tokens.slice(generatedPromptTokenLength), suspiciousness.slice(generatedPromptTokenLength), topTokenProbList.slice(generatedPromptTokenLength))
+    //console.log(paragraphAnalysis)
+
+    resultsBox.textContent = `Done! Results:\nTotal tokens: ${tokens.length}\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(4)}%\nPercentage with not in probs list: ${nonSusPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
+    resultsBox.textContent += paragraphAnalysis
   } catch (error) {
     console.error('Error:', error);
     resultsBox.textContent = 'An error occurred while processing the text.';
@@ -459,4 +459,70 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
   document.getElementById('runAnalysis').disabled = false
 });
 
+function analyzeParagraphs(tokens, scores, probabilities) {
+    let paragraphs = [];
+    let currentParagraphTokens = [];
+    let currentParagraphScores = [];
+    let currentParagraphProbs = [];
 
+    // Split tokens into paragraphs based on newline character
+    for (let i = 0; i < tokens.length; i++) {
+        if (tokens[i] === "\n") {
+            if (currentParagraphTokens.length > 0) {
+                paragraphs.push({
+                    tokens: currentParagraphTokens,
+                    scores: currentParagraphScores,
+                    probs: currentParagraphProbs
+                });
+                currentParagraphTokens = [];
+                currentParagraphScores = [];
+                currentParagraphProbs = [];
+            }
+        } else {
+            currentParagraphTokens.push(tokens[i]);
+            currentParagraphScores.push(scores[i]);
+            currentParagraphProbs.push(probabilities[i]);
+        }
+    }
+
+    // Add the last paragraph if it exists
+    if (currentParagraphTokens.length > 0) {
+        paragraphs.push({
+            tokens: currentParagraphTokens,
+            scores: currentParagraphScores,
+            probs: currentParagraphProbs
+        });
+    }
+
+    let result = "";
+
+    // Calculate metrics for each paragraph
+    for (let i = 0; i < paragraphs.length; i++) {
+        const paragraph = paragraphs[i];
+        const totalTokens = paragraph.tokens.length;
+
+        // Count tokens with score 10 and 0
+        let count10 = 0;
+        let count0 = 0;
+        for (let j = 0; j < paragraph.scores.length; j++) {
+            if (paragraph.scores[j] === 10) count10++;
+            if (paragraph.scores[j] === -1) count0++;
+        }
+
+        // Calculate percentages
+        const percent10 = (count10 / totalTokens) * 100;
+        const percent0 = (count0 / totalTokens) * 100;
+
+        // Calculate average probability
+        const totalProb = paragraph.probs.reduce((sum, prob) => sum + prob, 0);
+        const avgProb = totalProb / totalTokens;
+
+        // Get the sentence as a string
+        const sentence = paragraph.tokens.join(" ");
+
+        // Append to result string
+        result += `${sentence}\nPercent with suspiciousness of 10: ${percent10.toFixed(2)}%\nPercent with 0 suspiciousness: ${percent0.toFixed(2)}%\nAverage probability: ${avgProb.toFixed(4)}\n\n\n`;
+    }
+
+    return result.trim(); // Remove the trailing newline
+}
