@@ -9,7 +9,7 @@ Also consider this project (in its current state) to be a test of how good R1 is
 No.
 
 
-Fundamentally AI detectors impossible to make because you do not know the original prompt used. If you know the original prompt, you already know it is AI, so detecting it is useless. In addition, [research](https://github.com/BaleChen/nlu-final-project/blob/main/NLU-final-paper.pdf) shows you need to use the original model as a "judge" to accurately determine if a text is AI. If the detector uses Llama but the text was written with Claude, the detector won't work. 
+Fundamentally AI detectors are impossible to make because you do not know the original prompt used. If you know the original prompt, you already know it is AI, so detecting it is useless. This project uses an LLM to "reverse" the prompt, and appends it onto the beginning of the analysis. In addition, [research](https://github.com/BaleChen/nlu-final-project/blob/main/NLU-final-paper.pdf) shows you need to use the original model as a "judge" to accurately determine if a text is AI. If the detector uses Llama but the text was written with Claude, the detector won't work. 
 
 
 For now, the purpose of this tool isn't to determine whether a text was written by AI. Instead, it is meant to show you which parts of writing are more likely to be AI generated than other parts of the same piece of writing.
@@ -19,17 +19,14 @@ It uses a locally running LLM to generate determine the probability that each to
 
 
 ### How do I use it?
-First, download [llama.cpp](https://github.com/ggerganov/llama.cpp). Compile and run llama-server with a BASE model (NOT a chat model). In the future, when full analysis mode is added, you'll be able to use a non-reasoning (no r-1) chat model.
+First, download [llama.cpp](https://github.com/ggerganov/llama.cpp). Compile and run llama-server with a BASE model (NOT a chat model). If using full analysis mode (recommended), use a non-reasoning (no r-1) chat model.
 
 
 Next, navigate to your web browser and open up index.html.
 
 
-Paste in whatever text you want to analyze and hit "run analysis". Once it is finished, the top output box will have each word highlighted. Green or yellow is good, meaning that the LLM didn't think of that particular token as being particularly likely to have been generated. Red means that the AI agrees with what you wrote, which is bad. The lower output box shows raw token probabilities.
+Paste in whatever text you want to analyze and hit "run analysis". Once it is finished, the top output box will have each word highlighted. Green or yellow is good, meaning that the LLM didn't think of that particular token as being particularly likely to have been generated. Red means that the AI agrees with what you wrote, which is bad.
 
 
 ### Todo:
-Add a "full analysis" mode that first sends the input to another LLM, tells that LLM to generate a prompt that would output the input text, and then analyze the generated prompt + input using the existing method
-
-
-Add an overall "percent AI score"
+Add per-sentence level analysis of average token probabilities
