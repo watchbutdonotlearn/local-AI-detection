@@ -528,8 +528,10 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
 
     console.log(slopCount)
 
+    const numberOfParagraphSusStrings = processSuspiciousSequencesLength(suspiciousness.slice(generatedPromptTokenLength))
+
     //resultsBox.textContent = `Done! Results:\nTotal tokens: ${tokens.length}\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nPercentage not in probability list: ${nonSusPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
-    resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\nAverage suspiciousness: ${averageSuspiciousness.toFixed(2)}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${countSuspiciousStrings(suspiciousness.slice(generatedPromptTokenLength), 8)}\nPercent "slop" words: ${((slopCount / numberWords) * 100).toFixed(2)}%\n\n\n`;
+    resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\nAverage suspiciousness: ${averageSuspiciousness.toFixed(2)}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${countSuspiciousStrings(suspiciousness.slice(generatedPromptTokenLength), 8)}\n${numberOfParagraphSusStrings}\nPercent "slop" words: ${((slopCount / numberWords) * 100).toFixed(2)}%\n\n\n`;
 
     //resultsBox.textContent += "Overall percent probability is AI:" +  isThisAI(suspiciousPercent, nonSuspiciousLowPercent, averageTokenProbability, averageSuspiciousness, ((slopCount / numberWords) * 100)) + "\n\n\n"
 
@@ -593,6 +595,41 @@ function analyzeSlopPercentage(slopAnalyze) {
     });
     let numberWords = slopAnalyze.split(' ').length
     return (slopCounter / numberWords) * 100;
+}
+
+function processSuspiciousSequencesLength(arr) {
+    // Transform the array: >=9 becomes 10, then <=1 becomes 0
+    let transformed = arr.map(num => num >= 9 ? 10 : num);
+    transformed = transformed.map(num => num <= 1 ? 0 : num);
+
+    // Helper function to calculate average sequence length for a target value
+    const getAverageLength = (target) => {
+        let currentRun = 0;
+        const sequences = [];
+
+        for (const num of transformed) {
+            if (num === target) {
+                currentRun++;
+            } else {
+                if (currentRun > 0) {
+                    sequences.push(currentRun);
+                    currentRun = 0;
+                }
+            }
+        }
+
+        // Check for any remaining run after loop ends
+        if (currentRun > 0) {
+            sequences.push(currentRun);
+        }
+
+        return sequences.length === 0 ? 0 : sequences.reduce((sum, len) => sum + len, 0) / sequences.length;
+    };
+
+    const avgTenLength = getAverageLength(10).toFixed(2);
+    const avgZeroLength = getAverageLength(0).toFixed(2);
+
+    return `Average length of sequences of high suspiciousness: ${avgTenLength}\nAverage length of sequences of low suspiciousness: ${avgZeroLength}`;
 }
 
 function analyzeParagraphs(tokens, scores, probabilities, initialInput) {
@@ -663,10 +700,12 @@ function analyzeParagraphs(tokens, scores, probabilities, initialInput) {
 
         const averageParagraphScore = averageArray(paragraph.scores).toFixed(2)
 
-        const numberOfParagraphSusStrings = countSuspiciousStrings(paragraph.scores, 8)
+        const numberOfParagraphSusStrings = countSuspiciousStrings(paragraph.scores)
+
+        const paragraphSequenceSuspicious = processSuspiciousSequencesLength(paragraph.scores)
 
         // Append to result string
-        result += `${splitTextParagraphs[i]}\nPercent with suspiciousness of 10: ${percent10.toFixed(2)}%\nPercent with 0 suspiciousness: ${percent0.toFixed(2)}%\nAverage probability: ${avgProb.toFixed(4)}\nAverage suspiciousness: ${averageParagraphScore}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${numberOfParagraphSusStrings}\nPercent "slop" words: ${analyzeSlopPercentage(splitTextParagraphs[i]).toFixed(2)}%\n\n\n`;
+        result += `${splitTextParagraphs[i]}\nPercent with suspiciousness of 10: ${percent10.toFixed(2)}%\nPercent with 0 suspiciousness: ${percent0.toFixed(2)}%\nAverage probability: ${avgProb.toFixed(4)}\nAverage suspiciousness: ${averageParagraphScore}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${numberOfParagraphSusStrings}\n${paragraphSequenceSuspicious}\nPercent "slop" words: ${analyzeSlopPercentage(splitTextParagraphs[i]).toFixed(2)}%\n\n\n`;
     }
 
     if (paragraphs.length == 1) {
