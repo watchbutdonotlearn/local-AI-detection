@@ -92,3 +92,73 @@ button:hover {
   margin-top: 10px;
   font-size: 14px;
 }
+
+.settings-container {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000; /* Ensure it's on top of other elements */
+}
+
+.settings-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.settings-button:hover {
+  background-color: #0056b3;
+}
+
+.settings-content {
+  display: none;
+  position: absolute;
+  bottom: 50px;
+  left: 0;
+  background-color: white;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  z-index: 1000; /* Ensure it's on top of other elements */
+}
+
+.settings-content label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.settings-content textarea {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  max-height: 40px; /* Minimum height */
+}
+
+.settings-content textarea:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.save-button {
+  width: 100%;
+  padding: 10px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.save-button:hover {
+  background-color: #218838;
+}
