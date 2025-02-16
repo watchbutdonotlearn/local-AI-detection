@@ -429,7 +429,7 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
         const matches = currentToken.match(regex);
         if (matches) {
             suspiciousness[i] = suspiciousness[i] + 2 * ((.32 - value) / .31) ** 3
-            console.log('triggered slop detector!!! offending word: ' + currentToken + '||||| contribution from slop: ' + 2 * ((.6 - value) / .58) ** 3)
+            //console.log('triggered slop detector!!! offending word: ' + currentToken + '||||| contribution from slop: ' + 2 * ((.6 - value) / .58) ** 3)
         }
       });
 
@@ -519,10 +519,11 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     const nonSusPercent = nonSusRatio * 100
     const nonSuspiciousLowPercent = (numberSuspiciousLow / inputTokenLenth) * 100
 
-    const paragraphAnalysis = analyzeParagraphs(tokens.slice(generatedPromptTokenLength), suspiciousness.slice(generatedPromptTokenLength), chosenTokenProbList.slice(generatedPromptTokenLength))
+    const paragraphAnalysis = analyzeParagraphs(tokens.slice(generatedPromptTokenLength), suspiciousness.slice(generatedPromptTokenLength), chosenTokenProbList.slice(generatedPromptTokenLength), inputText)
     console.log(tokens.slice(generatedPromptTokenLength))
 
     let slopCount = 0;
+    let numberWords = inputText.split(' ').length
 
     // Iterate over each phrase in the list
     slopPhrases.forEach(([phrase, value]) => {
@@ -530,14 +531,14 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
         const matches = inputText.match(regex);
         if (matches) {
             slopCount += (matches.length * (.32 - value) / .29) ** 2
-            console.log('triggering slop word: ' + phrase + '     instances: ' + matches.length + ' contribution: ' + (matches.length * (.32 - value) / .31) ** 2)
+            //console.log('triggering slop word: ' + phrase + '     instances: ' + matches.length + ' contribution: ' + (matches.length * (.32 - value) / .31) ** 2)
         }
     });
 
     console.log(slopCount)
 
     //resultsBox.textContent = `Done! Results:\nTotal tokens: ${tokens.length}\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nPercentage not in probability list: ${nonSusPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
-    resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\nAverage suspiciousness: ${averageSuspiciousness.toFixed(2)}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${countSuspiciousStrings(suspiciousness.slice(generatedPromptTokenLength), 8)}\n"Slop" word percentage: ${((slopCount / inputTokenLenth) * 100).toFixed(2)}%\n\n\n`;
+    resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\nAverage suspiciousness: ${averageSuspiciousness.toFixed(2)}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${countSuspiciousStrings(suspiciousness.slice(generatedPromptTokenLength), 8)}\nPercent "slop" words: ${((slopCount / numberWords) * 100).toFixed(2)}%\n\n\n`;
     resultsBox.textContent += paragraphAnalysis
   } catch (error) {
     console.error('Error:', error);
@@ -573,7 +574,21 @@ function countSuspiciousStrings(scores, n) {
     return count;
 }
 
-function analyzeParagraphs(tokens, scores, probabilities) {
+function analyzeSlopPercentage(slopAnalyze) {
+  // Iterate over each phrase in the list
+    let slopCounter = 0
+    slopPhrases.forEach(([phrase, value]) => {
+        const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+        const matches = slopAnalyze.match(regex);
+        if (matches) {
+            slopCounter += (matches.length * (.32 - value) / .29) ** 2
+        }
+    });
+    let numberWords = slopAnalyze.split(' ').length
+    return (slopCounter / numberWords) * 100;
+}
+
+function analyzeParagraphs(tokens, scores, probabilities, initialInput) {
     let paragraphs = [];
     let currentParagraphTokens = [];
     let currentParagraphScores = [];
@@ -634,8 +649,16 @@ function analyzeParagraphs(tokens, scores, probabilities) {
         // Get the sentence as a string
         const sentence = paragraph.tokens.join(" ");
 
+        const averageParagraphScore = averageArray(paragraph.scores).toFixed(2)
+
+        const numberOfParagraphSusStrings = countSuspiciousStrings(paragraph.scores, 8)
+
+        let initialInputSanatized = initialInput.replace(/\n\s*\n/g, '\n')
+
+        const splitTextParagraphs = initialInputSanatized.split('\n') //split up
+
         // Append to result string
-        result += `${sentence}\nPercent with suspiciousness of 10: ${percent10.toFixed(2)}%\nPercent with 0 suspiciousness: ${percent0.toFixed(2)}%\nAverage probability: ${avgProb.toFixed(4)}\n\n\n`;
+        result += `${sentence}\nPercent with suspiciousness of 10: ${percent10.toFixed(2)}%\nPercent with 0 suspiciousness: ${percent0.toFixed(2)}%\nAverage probability: ${avgProb.toFixed(4)}\nAverage suspiciousness: ${averageParagraphScore}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${numberOfParagraphSusStrings}\nPercent "slop" words: ${analyzeSlopPercentage(splitTextParagraphs[i]).toFixed(2)}%\n\n\n`;
     }
 
     return result.trim(); // Remove the trailing newline
