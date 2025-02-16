@@ -7,6 +7,16 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="settings-container">
+    <button id="settings-button" class="settings-button">Settings</button>
+    <div id="settings-content" class="settings-content">
+      <label for="api-link">API Link:</label>
+      <textarea id="api-link" rows="1">127.0.0.1:8080</textarea>
+      <label for="prompt-template">Prompt Template:</label>
+      <textarea id="prompt-template" rows="1" placeholder='<start_of_turn>user\n${generatedPromptMessage}<end_of_turn>\n<start_of_turn>model\n'></textarea>
+      <button id="save-button" class="save-button">Save</button>
+    </div>
+  </div>
   <div class="container">
     <h1>AI Detector</h1>
     <textarea id="inputText" placeholder="Enter text here..."></textarea>
