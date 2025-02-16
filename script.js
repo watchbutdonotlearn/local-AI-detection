@@ -1,5 +1,34 @@
+var apiLink = "127.0.0.1:8080"
+var promptTemplate = "<start_of_turn>user\n${generatedPromptMessage}<end_of_turn>\n<start_of_turn>model\n"
+document.getElementById("prompt-template").value = promptTemplate //because idk how any other way
+
 var probsPanelOpen = false
 var currentSelectedToken = [0, 0];
+
+function averageArray(array) {
+  var total = 0;
+  for(var i = 0; i < array.length; i++) {
+    total += array[i];
+  }
+  return total / array.length;
+}
+
+document.getElementById("save-button").addEventListener("click", function () {
+  apiLink = document.getElementById("api-link").value;
+  promptTemplate = document.getElementById("prompt-template").value;
+  console.log("API Link:", apiLink);
+  console.log("Prompt Template:", promptTemplate);
+  //alert("Settings saved!");
+});
+
+document.getElementById("settings-button").addEventListener("click", function () {
+  const settingsContent = document.getElementById("settings-content");
+  if (settingsContent.style.display === "none" || settingsContent.style.display === "") {
+    settingsContent.style.display = "block";
+  } else {
+    settingsContent.style.display = "none";
+  }
+});
 
 document.getElementById('runAnalysis').addEventListener('click', async () => {
   const inputText = document.getElementById('inputText').value;
@@ -21,7 +50,7 @@ document.getElementById('runAnalysis').addEventListener('click', async () => {
 
   try {
     // Step 1: Tokenize the input text
-    const tokenizeResponse = await fetch('http://127.0.0.1:8080/tokenize', {
+    const tokenizeResponse = await fetch('http://' + apiLink + '/tokenize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -42,7 +71,7 @@ document.getElementById('runAnalysis').addEventListener('click', async () => {
     // Array to store suspiciousness scores
     const suspiciousness = new Array(tokens.length).fill(null); // First token has no score
     const topLogprobsList = new Array(tokens.length).fill(null); // Store top logprobs for each token
-    var topTokenProbList = new Array(tokens.length).fill(null);
+    var chosenTokenProbList = new Array(tokens.length).fill(null);
 
     //so I guess
     //for (let i=n ...)
@@ -61,7 +90,7 @@ document.getElementById('runAnalysis').addEventListener('click', async () => {
       const currentToken = currentTokenSpaces.replace(/\s/g, '')
 
       // Make a request to the /completion endpoint
-      const completionResponse = await fetch('http://127.0.0.1:8080/completion', {
+      const completionResponse = await fetch('http://' + apiLink + '/completion', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,7 +154,7 @@ document.getElementById('runAnalysis').addEventListener('click', async () => {
       console.log("current token probability: " + topTokenProbability)
 
 
-      topTokenProbList[i] = topTokenProbability.toFixed(2)
+      chosenTokenProbList[i] = topTokenProbability.toFixed(2)
 
       // Update the original results box
       /*resultsBox.textContent = tokens
@@ -133,7 +162,7 @@ document.getElementById('runAnalysis').addEventListener('click', async () => {
           if (index === 0) {
             return token; // First token has no suspiciousness
           } else {
-            return `${token}(${suspiciousness[index]})(${topTokenProbList[index]})`;
+            return `${token}(${suspiciousness[index]})(${chosenTokenProbList[index]})`;
           }
         })
         .join(' ');*/
@@ -152,7 +181,7 @@ document.getElementById('runAnalysis').addEventListener('click', async () => {
         .join(' ');
 
       // Simulate delay for better visualization
-      await new Promise(resolve => setTimeout(resolve, 10));
+      //await new Promise(resolve => setTimeout(resolve, 10));
     }
 
     // Add click event listeners to tokens in the color-coded box
@@ -196,6 +225,8 @@ function getColorForScore(score) {
 
 
 //full analysis
+//might remove original legacy analysis mode after this thing is done
+
 document.getElementById('runFullAnalysis').addEventListener('click', async () => {
   document.getElementById('runAnalysis').disabled = true
   const inputText = document.getElementById('inputText').value;
@@ -223,7 +254,7 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
       },
     ]
 
-    const generatedPromptResponse = await fetch('http://127.0.0.1:8080/v1/chat/completions', {
+    const generatedPromptResponse = await fetch('http://' + apiLink + '/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -244,14 +275,16 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     const generatedPromptMessage = generatedPromptData.choices[0].message.content
     console.log(generatedPromptMessage)
 
-    const fullGeneratedPrompt = `<start_of_turn>user\n${generatedPromptMessage}<end_of_turn>\n<start_of_turn>model\n`
+    //const fullGeneratedPrompt = `<start_of_turn>user\n${generatedPromptMessage}<end_of_turn>\n<start_of_turn>model\n`
+    promptTemplate = '<start_of_turn>user\n{promptMessage}<end_of_turn>\n<start_of_turn>model\n'
+    const fullGeneratedPrompt = promptTemplate.replace('{promptMessage}', generatedPromptMessage);
 
     //console.log(fullGeneratedPrompt)
 
     resultsBox.textContent = 'Tokenizing generated prompt...';
 
     //tokenize just the generated prompt:
-    const tokenizeGeneratedPromptResponse = await fetch('http://127.0.0.1:8080/tokenize', {
+    const tokenizeGeneratedPromptResponse = await fetch('http://' + apiLink + '/tokenize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -271,7 +304,7 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     resultsBox.textContent = 'Tokenizing input text...';
 
     // Step 1: Tokenize the input text
-    const tokenizeResponse = await fetch('http://127.0.0.1:8080/tokenize', {
+    const tokenizeResponse = await fetch('http://' + apiLink + '/tokenize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -292,7 +325,7 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     // Array to store suspiciousness scores
     var suspiciousness = new Array(tokens.length).fill(null); // First token has no score
     var topLogprobsList = new Array(tokens.length).fill(null); // Store top logprobs for each token
-    var topTokenProbList = new Array(tokens.length).fill(null);
+    var chosenTokenProbList = new Array(tokens.length).fill(null);
 
     //so I guess
     //for (let i=n ...)
@@ -352,7 +385,6 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
       if (tokenIndex === 0) {
         suspiciousness[i] = 10; // Top of the list
         topTokenProbability = topLogprobs[0].prob
-        numberSuspicious = numberSuspicious + 1
       } else if (tokenIndex > 0 && tokenIndex < 10) {
         suspiciousness[i] = 10 - tokenIndex; // Between 1st and 10th
         topTokenProbability = topLogprobs[tokenIndex].prob
@@ -364,12 +396,14 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
 
       //modify suspiciousness value depending on how probable the token is
       if (topTokenProbability < 0.05){
-        suspiciousness[i] = suspiciousness[i] - 4
+        suspiciousness[i] = suspiciousness[i] - 5
       } else if (topTokenProbability < 0.1){
+        suspiciousness[i] = suspiciousness[i] - 4
+      } else if (topTokenProbability < 0.2){
         suspiciousness[i] = suspiciousness[i] - 3
       } else if (topTokenProbability < 0.3){
         suspiciousness[i] = suspiciousness[i] - 2
-      } else if (topTokenProbability < 0.6){
+      } else if (topTokenProbability < 0.4){
         suspiciousness[i] = suspiciousness[i] - 1
       }
 
@@ -378,13 +412,17 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
         numberSuspiciousLow = numberSuspiciousLow + 1
       }
 
-      topTokenProbList[i] = topTokenProbability
+      if (suspiciousness[i] == 10) {
+        numberSuspicious = numberSuspicious + 1
+      }
+
+      chosenTokenProbList[i] = topTokenProbability
 
       // Update the color-coded results box
       colorCodedResultsBox.innerHTML = tokens
         .map((token, index) => {
           if (index === 0) {
-            return `<span class="token">${token}</span>`; // First token has no suspiciousness
+            return `<span class="token">${token}</span>`;
           } else {
             let score;
             if (suspiciousness[index] === null){
@@ -414,7 +452,8 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
           logprobsContent.innerHTML += topLogprobsList[index]
             .map(entry => `<div>${entry.token}: ${entry.prob.toFixed(5)}</div>`)
             .join('');
-            logprobsContent.innerHTML += "<p>suspiciousness: " + suspiciousness[index] + "</p>";
+            logprobsContent.innerHTML += "<p>Suspiciousness: " + suspiciousness[index] + "</p>";
+            logprobsContent.innerHTML += "<p>Chosen token probability: " + chosenTokenProbList[index].toFixed(4) + "</p>";
             logprobsContent.innerHTML += "<button onclick='logprobsPanel.classList.remove(\"active\"); probsPanelOpen = !probsPanelOpen;'>Close</button>";
           if (!probsPanelOpen) {
             logprobsPanel.classList.add('active');
@@ -430,16 +469,8 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     });
 
     //finish and print results
-    function averageArray(array) {
-      var total = 0;
-      for(var i = 0; i < array.length; i++) {
-        total += array[i];
-      }
-      return total / array.length;
-    }
-
-    topTokenProbListWithoutNull = topTokenProbList.filter(element => {return element !== null;});
-    const averageTokenProbability = averageArray(topTokenProbListWithoutNull)
+    chosenTokenProbListWithoutNull = chosenTokenProbList.filter(element => {return element !== null;});
+    const averageTokenProbability = averageArray(chosenTokenProbListWithoutNull)
     const inputTokenLenth = tokens.length - generatedPromptTokenLength
     const suspiciousRatio = numberSuspicious / inputTokenLenth
     const suspiciousPercent = suspiciousRatio * 100
@@ -447,10 +478,11 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     const nonSusPercent = nonSusRatio * 100
     const nonSuspiciousLowPercent = (numberSuspiciousLow / inputTokenLenth) * 100
 
-    const paragraphAnalysis = analyzeParagraphs(tokens.slice(generatedPromptTokenLength), suspiciousness.slice(generatedPromptTokenLength), topTokenProbList.slice(generatedPromptTokenLength))
+    const paragraphAnalysis = analyzeParagraphs(tokens.slice(generatedPromptTokenLength), suspiciousness.slice(generatedPromptTokenLength), chosenTokenProbList.slice(generatedPromptTokenLength))
     //console.log(paragraphAnalysis)
 
-    resultsBox.textContent = `Done! Results:\nTotal tokens: ${tokens.length}\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(4)}%\nPercentage with not in probs list: ${nonSusPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
+    //resultsBox.textContent = `Done! Results:\nTotal tokens: ${tokens.length}\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nPercentage not in probability list: ${nonSusPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
+    resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
     resultsBox.textContent += paragraphAnalysis
   } catch (error) {
     console.error('Error:', error);
