@@ -1,6 +1,13 @@
 var apiLink = "127.0.0.1:8080"
-var promptTemplate = "<start_of_turn>user\n${generatedPromptMessage}<end_of_turn>\n<start_of_turn>model\n"
+var promptTemplate = "<<start_of_turn>user\n{promptMessage}<end_of_turn>\n<start_of_turn>model\n"
 document.getElementById("prompt-template").value = promptTemplate //because idk how any other way
+
+const reversePromptStylePreserving = 'You will write a prompt for a language model that will output the following text, including its tone and style. Only output the prompt.\n\n'
+const baseReversePromptString = "You will write a prompt for a language model that will output the following text. Only output the prompt.\n\n"
+const longAndDetailedReversePromptString = "You will write a prompt long and detailed for a language model that will output the following text. Make sure to include the tone and style of the text. Only output the prompt.\n\n"
+
+var reverseModelPrompt = baseReversePromptString
+document.getElementById("prompt-reverse").value = reverseModelPrompt //because idk how any other way
 
 var probsPanelOpen = false
 var currentSelectedToken = [0, 0];
@@ -16,10 +23,21 @@ function averageArray(array) {
 document.getElementById("save-button").addEventListener("click", function () {
   apiLink = document.getElementById("api-link").value;
   promptTemplate = document.getElementById("prompt-template").value;
+  reverseModelPrompt = document.getElementById("prompt-reverse").value;
   console.log("API Link:", apiLink);
   console.log("Prompt Template:", promptTemplate);
   //alert("Settings saved!");
 });
+
+document.getElementById("whichPrompt").addEventListener("click", function () {
+  if (document.getElementById("whichPrompt").value == 1) {
+    document.getElementById("prompt-reverse").value = baseReversePromptString
+  } else if (document.getElementById("whichPrompt").value == 2) {
+    document.getElementById("prompt-reverse").value = reversePromptStylePreserving
+  } else if (document.getElementById("whichPrompt").value == 3) {
+    document.getElementById("prompt-reverse").value = longAndDetailedReversePromptString
+  }
+})
 
 document.getElementById("settings-button").addEventListener("click", function () {
   const settingsContent = document.getElementById("settings-content");
@@ -250,9 +268,11 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     const generatePromptQuery = [
       {
       "role": "user",
-      "content": "You will write a prompt for a language model that will output the following text. Only output the prompt. \n\n" + inputText
+      "content": reverseModelPrompt + inputText
       },
     ]
+
+    console.log(reverseModelPrompt + inputText)
 
     const generatedPromptResponse = await fetch('http://' + apiLink + '/v1/chat/completions', {
       method: 'POST',
@@ -276,7 +296,7 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     console.log(generatedPromptMessage)
 
     //const fullGeneratedPrompt = `<start_of_turn>user\n${generatedPromptMessage}<end_of_turn>\n<start_of_turn>model\n`
-    promptTemplate = '<start_of_turn>user\n{promptMessage}<end_of_turn>\n<start_of_turn>model\n'
+    //promptTemplate = '<start_of_turn>user\n{promptMessage}<end_of_turn>\n<start_of_turn>model\n'
     const fullGeneratedPrompt = promptTemplate.replace('{promptMessage}', generatedPromptMessage);
 
     //console.log(fullGeneratedPrompt)
@@ -396,9 +416,9 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
 
       //modify suspiciousness value depending on how probable the token is
       if (topTokenProbability < 0.05){
-        suspiciousness[i] = suspiciousness[i] - 5
+        suspiciousness[i] = suspiciousness[i] - 7
       } else if (topTokenProbability < 0.1){
-        suspiciousness[i] = suspiciousness[i] - 4
+        suspiciousness[i] = suspiciousness[i] - 6
       } else if (topTokenProbability < 0.2){
         suspiciousness[i] = suspiciousness[i] - 3
       } else if (topTokenProbability < 0.3){
@@ -479,10 +499,10 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     const nonSuspiciousLowPercent = (numberSuspiciousLow / inputTokenLenth) * 100
 
     const paragraphAnalysis = analyzeParagraphs(tokens.slice(generatedPromptTokenLength), suspiciousness.slice(generatedPromptTokenLength), chosenTokenProbList.slice(generatedPromptTokenLength))
-    //console.log(paragraphAnalysis)
+    console.log(tokens.slice(generatedPromptTokenLength))
 
     //resultsBox.textContent = `Done! Results:\nTotal tokens: ${tokens.length}\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nPercentage not in probability list: ${nonSusPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
-    resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
+    resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${countSuspiciousStrings(suspiciousness.slice(generatedPromptTokenLength), 8)}\n\n\n`;
     resultsBox.textContent += paragraphAnalysis
   } catch (error) {
     console.error('Error:', error);
@@ -490,6 +510,32 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
   }
   document.getElementById('runAnalysis').disabled = false
 });
+
+
+function countSuspiciousStrings(scores, n) {
+    let count = 0;
+    let i = 0;
+
+    while (i <= scores.length - n) {
+        let found = true;
+
+        // Check if the next n scores are 9 or higher
+        for (let j = 0; j < n; j++) {
+            if (scores[i + j] < 8) {
+                found = false;
+                i += j + 1; // Skip to the end of the current sequence
+                break;
+            }
+        }
+
+        if (found) {
+            count++;
+            i += n; // Skip to the end of the found sequence
+        }
+    }
+
+    return count;
+}
 
 function analyzeParagraphs(tokens, scores, probabilities) {
     let paragraphs = [];
@@ -499,7 +545,7 @@ function analyzeParagraphs(tokens, scores, probabilities) {
 
     // Split tokens into paragraphs based on newline character
     for (let i = 0; i < tokens.length; i++) {
-        if (tokens[i] === "\n") {
+        if (tokens[i] === "\n" || tokens[i] === "\n\n") {
             if (currentParagraphTokens.length > 0) {
                 paragraphs.push({
                     tokens: currentParagraphTokens,

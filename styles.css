@@ -32,7 +32,6 @@ textarea {
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 16px;
-  resize: none;
 }
 
 button {
@@ -124,7 +123,7 @@ button:hover {
   border: 1px solid #ccc;
   border-radius: 5px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  width: 400px;
+  min-width: 400px;
   z-index: 1000; /* Ensure it's on top of other elements */
 }
 
@@ -140,7 +139,8 @@ button:hover {
   margin-bottom: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  max-height: 40px; /* Minimum height */
+  height: 60px; /* Minimum height */
+  width: 350px;
 }
 
 .settings-content textarea:focus {
