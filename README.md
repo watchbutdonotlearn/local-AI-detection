@@ -19,13 +19,16 @@ It uses a locally running LLM to generate determine the probability that each to
 
 
 ### How do I use it?
-First, download [llama.cpp](https://github.com/ggerganov/llama.cpp). Compile and run llama-server with a BASE model (NOT a chat model). If using full analysis mode (recommended), use a non-reasoning (no r-1) chat model.
+First, download [llama.cpp](https://github.com/ggerganov/llama.cpp). Compile and run llama-server with a non-reasoning (no r-1) chat model. The default is gemma-v2. If you want to use a different model, change the chat template in the settings to the chat template of the model you are using.
 
 
 Next, navigate to your web browser and open up index.html.
 
 
-Paste in whatever text you want to analyze and hit "run analysis". Once it is finished, the top output box will have each word highlighted. Green or yellow is good, meaning that the LLM didn't think of that particular token as being particularly likely to have been generated. Red means that the AI agrees with what you wrote, which is bad.
+Paste in whatever text you want to analyze and hit "run analysis". Once it is finished, the top output box will have each word highlighted. Green or yellow is good, meaning that the LLM didn't think of that particular token as being particularly likely to have been generated. Red means that the AI agrees with what you wrote, which is bad. The bottom box will output various metrics of how "AI" the text is. Usually the best metric to look at is "number of tokens with 0 suspiciousness." If this metric is above 30%, usually the text is not AI.
+
+
+The detector currently ONLY works on English. It does NOT work for code. Ideally, the text sample should be above 300 words in length, and the generated prompt should at least reasonably fit the input text. If it doesn't, you can change the prompt used to generate the reverse prompt in settings, and try again.
 
 
 ### Todo:

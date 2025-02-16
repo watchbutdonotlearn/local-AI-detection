@@ -58,6 +58,7 @@ document.getElementById("settings-button").addEventListener("click", function ()
   }
 });
 
+/*
 document.getElementById('runAnalysis').addEventListener('click', async () => {
   const inputText = document.getElementById('inputText').value;
   const resultsBox = document.getElementById('resultsBox');
@@ -185,15 +186,6 @@ document.getElementById('runAnalysis').addEventListener('click', async () => {
       chosenTokenProbList[i] = topTokenProbability.toFixed(2)
 
       // Update the original results box
-      /*resultsBox.textContent = tokens
-        .map((token, index) => {
-          if (index === 0) {
-            return token; // First token has no suspiciousness
-          } else {
-            return `${token}(${suspiciousness[index]})(${chosenTokenProbList[index]})`;
-          }
-        })
-        .join(' ');*/
 
       // Update the color-coded results box
       colorCodedResultsBox.innerHTML = tokens
@@ -236,7 +228,7 @@ document.getElementById('runAnalysis').addEventListener('click', async () => {
     console.error('Error:', error);
     resultsBox.textContent = 'An error occurred while processing the text.';
   }
-});
+});*/
 
 // Helper function to get color based on suspiciousness score
 function getColorForScore(score) {
@@ -256,7 +248,6 @@ function getColorForScore(score) {
 //might remove original legacy analysis mode after this thing is done
 
 document.getElementById('runFullAnalysis').addEventListener('click', async () => {
-  document.getElementById('runAnalysis').disabled = true
   const inputText = document.getElementById('inputText').value;
   const resultsBox = document.getElementById('resultsBox');
   const colorCodedResultsBox = document.getElementById('colorCodedResultsBox');
@@ -539,14 +530,30 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
 
     //resultsBox.textContent = `Done! Results:\nTotal tokens: ${tokens.length}\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nPercentage not in probability list: ${nonSusPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
     resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\nAverage suspiciousness: ${averageSuspiciousness.toFixed(2)}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${countSuspiciousStrings(suspiciousness.slice(generatedPromptTokenLength), 8)}\nPercent "slop" words: ${((slopCount / numberWords) * 100).toFixed(2)}%\n\n\n`;
+
+    //resultsBox.textContent += "Overall percent probability is AI:" +  isThisAI(suspiciousPercent, nonSuspiciousLowPercent, averageTokenProbability, averageSuspiciousness, ((slopCount / numberWords) * 100)) + "\n\n\n"
+
     resultsBox.textContent += paragraphAnalysis
   } catch (error) {
     console.error('Error:', error);
     resultsBox.textContent = 'An error occurred while processing the text.';
   }
-  document.getElementById('runAnalysis').disabled = false
 });
 
+
+function isThisAI(susPercentage, notSusPercent, avgChosenTokenProb, avgSussiness, percentageSlop) {
+  let verdictWeight = 0
+  if (notSusPercent > .4){verdictWeight += 7}
+  else if (notSusPercent > .3){verdictWeight += 5}
+  if (susPercentage > .5){verdictWeight += 3}
+  if (avgChosenTokenProb > .6) {verdictWeight += 5}
+  else if (avgChosenTokenProb > .5){verdictWeight += 2}
+  if (percentageSlop > 5) {verdictWeight += 2}
+
+  if (verdictWeight > 19) {verdictWeight = 19}
+  let verdictPercent = (verdictWeight / 19) * 100
+  return verdictPercent;
+}
 
 
 function countSuspiciousStrings(scores, n) {
@@ -625,6 +632,11 @@ function analyzeParagraphs(tokens, scores, probabilities, initialInput) {
 
     let result = "";
 
+    result = "Number of paragraphs: " + paragraphs.length + "\n\n"
+
+    let initialInputSanatized = initialInput.replace(/\n\s*\n/g, '\n')
+    const splitTextParagraphs = initialInputSanatized.split('\n') //split up
+
     // Calculate metrics for each paragraph
     for (let i = 0; i < paragraphs.length; i++) {
         const paragraph = paragraphs[i];
@@ -653,12 +665,12 @@ function analyzeParagraphs(tokens, scores, probabilities, initialInput) {
 
         const numberOfParagraphSusStrings = countSuspiciousStrings(paragraph.scores, 8)
 
-        let initialInputSanatized = initialInput.replace(/\n\s*\n/g, '\n')
-
-        const splitTextParagraphs = initialInputSanatized.split('\n') //split up
-
         // Append to result string
-        result += `${sentence}\nPercent with suspiciousness of 10: ${percent10.toFixed(2)}%\nPercent with 0 suspiciousness: ${percent0.toFixed(2)}%\nAverage probability: ${avgProb.toFixed(4)}\nAverage suspiciousness: ${averageParagraphScore}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${numberOfParagraphSusStrings}\nPercent "slop" words: ${analyzeSlopPercentage(splitTextParagraphs[i]).toFixed(2)}%\n\n\n`;
+        result += `${splitTextParagraphs[i]}\nPercent with suspiciousness of 10: ${percent10.toFixed(2)}%\nPercent with 0 suspiciousness: ${percent0.toFixed(2)}%\nAverage probability: ${avgProb.toFixed(4)}\nAverage suspiciousness: ${averageParagraphScore}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${numberOfParagraphSusStrings}\nPercent "slop" words: ${analyzeSlopPercentage(splitTextParagraphs[i]).toFixed(2)}%\n\n\n`;
+    }
+
+    if (paragraphs.length == 1) {
+      result = "Paragraphs: 1"
     }
 
     return result.trim(); // Remove the trailing newline
