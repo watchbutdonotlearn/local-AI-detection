@@ -30,3 +30,7 @@ Paste in whatever text you want to analyze and hit "run analysis". Once it is fi
 
 ### Todo:
 Add per-sentence level analysis of average token probabilities
+
+
+### Credits:
+Shoutout to [Sam Peach](https://github.com/sam-paech/antislop-sampler) for providing the "slop" words list.

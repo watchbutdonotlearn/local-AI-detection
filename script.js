@@ -4,7 +4,7 @@ document.getElementById("prompt-template").value = promptTemplate //because idk 
 
 const reversePromptStylePreserving = 'You will write a prompt for a language model that will output the following text, including its tone and style. Only output the prompt.\n\n'
 const baseReversePromptString = "You will write a prompt for a language model that will output the following text. Only output the prompt.\n\n"
-const longAndDetailedReversePromptString = "You will write a prompt long and detailed for a language model that will output the following text. Make sure to include the tone and style of the text. Only output the prompt.\n\n"
+const longAndDetailedReversePromptString = "You will write a long and detailed prompt for a language model that will output the following text. Make sure to include the tone and style of the text. Only output the prompt.\n\n"
 
 var reverseModelPrompt = baseReversePromptString
 document.getElementById("prompt-reverse").value = reverseModelPrompt //because idk how any other way
@@ -28,6 +28,16 @@ document.getElementById("save-button").addEventListener("click", function () {
   console.log("Prompt Template:", promptTemplate);
   //alert("Settings saved!");
 });
+
+var slopResponse;
+var slopPhrases;
+
+// Fetch the phrases.json file
+(async () => {
+    slopResponse = await fetch('slop_phrase_prob_adjustments_5k.json');
+    slopPhrases = await slopResponse.json();
+})();
+
 
 document.getElementById("whichPrompt").addEventListener("click", function () {
   if (document.getElementById("whichPrompt").value == 1) {
@@ -414,6 +424,15 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
         numberSuspiciousZero = numberSuspiciousZero + 1
       }
 
+      slopPhrases.forEach(([phrase, value]) => {
+        const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+        const matches = currentToken.match(regex);
+        if (matches) {
+            suspiciousness[i] = suspiciousness[i] + 2 * ((.32 - value) / .31) ** 3
+            console.log('triggered slop detector!!! offending word: ' + currentToken + '||||| contribution from slop: ' + 2 * ((.6 - value) / .58) ** 3)
+        }
+      });
+
       //modify suspiciousness value depending on how probable the token is
       if (topTokenProbability < 0.05){
         suspiciousness[i] = suspiciousness[i] - 7
@@ -427,12 +446,13 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
         suspiciousness[i] = suspiciousness[i] - 1
       }
 
-      if (suspiciousness[i] < 1){
+      if (suspiciousness[i] <= 0){
         suspiciousness[i] = -1
         numberSuspiciousLow = numberSuspiciousLow + 1
       }
 
-      if (suspiciousness[i] == 10) {
+      if (suspiciousness[i] >= 10) {
+        suspiciousness[i] = 10
         numberSuspicious = numberSuspicious + 1
       }
 
@@ -491,6 +511,7 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     //finish and print results
     chosenTokenProbListWithoutNull = chosenTokenProbList.filter(element => {return element !== null;});
     const averageTokenProbability = averageArray(chosenTokenProbListWithoutNull)
+    const averageSuspiciousness = averageArray(suspiciousness.slice(generatedPromptTokenLength))
     const inputTokenLenth = tokens.length - generatedPromptTokenLength
     const suspiciousRatio = numberSuspicious / inputTokenLenth
     const suspiciousPercent = suspiciousRatio * 100
@@ -501,8 +522,22 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     const paragraphAnalysis = analyzeParagraphs(tokens.slice(generatedPromptTokenLength), suspiciousness.slice(generatedPromptTokenLength), chosenTokenProbList.slice(generatedPromptTokenLength))
     console.log(tokens.slice(generatedPromptTokenLength))
 
+    let slopCount = 0;
+
+    // Iterate over each phrase in the list
+    slopPhrases.forEach(([phrase, value]) => {
+        const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+        const matches = inputText.match(regex);
+        if (matches) {
+            slopCount += (matches.length * (.32 - value) / .29) ** 2
+            console.log('triggering slop word: ' + phrase + '     instances: ' + matches.length + ' contribution: ' + (matches.length * (.32 - value) / .31) ** 2)
+        }
+    });
+
+    console.log(slopCount)
+
     //resultsBox.textContent = `Done! Results:\nTotal tokens: ${tokens.length}\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nPercentage not in probability list: ${nonSusPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\n\n\n`;
-    resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${countSuspiciousStrings(suspiciousness.slice(generatedPromptTokenLength), 8)}\n\n\n`;
+    resultsBox.textContent = `Done! Results:\nInput tokens: ${inputTokenLenth}\nPercentage with suspiciousness 10: ${suspiciousPercent.toFixed(2)}%\nPercentage with 0 suspiciousness: ${nonSuspiciousLowPercent.toFixed(2)}%\nChosen token probability average: ${averageTokenProbability.toFixed(4)}\nAverage suspiciousness: ${averageSuspiciousness.toFixed(2)}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${countSuspiciousStrings(suspiciousness.slice(generatedPromptTokenLength), 8)}\n"Slop" word percentage: ${((slopCount / inputTokenLenth) * 100).toFixed(2)}%\n\n\n`;
     resultsBox.textContent += paragraphAnalysis
   } catch (error) {
     console.error('Error:', error);
@@ -510,6 +545,7 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
   }
   document.getElementById('runAnalysis').disabled = false
 });
+
 
 
 function countSuspiciousStrings(scores, n) {
