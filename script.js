@@ -38,14 +38,29 @@ var slopPhrases;
     slopPhrases = await slopResponse.json();
 })();
 
+var usingCustomReversePrompt = false
 
 document.getElementById("whichPrompt").addEventListener("click", function () {
   if (document.getElementById("whichPrompt").value == 1) {
     document.getElementById("prompt-reverse").value = baseReversePromptString
+    document.getElementById("promptReverseLabel").innerHTML = "Prompt for prompt reverser:"
+    reverseModelPrompt = document.getElementById("prompt-reverse").value;
+    usingCustomReversePrompt = false
   } else if (document.getElementById("whichPrompt").value == 2) {
     document.getElementById("prompt-reverse").value = reversePromptStylePreserving
+    document.getElementById("promptReverseLabel").innerHTML = "Prompt for prompt reverser:"
+    reverseModelPrompt = document.getElementById("prompt-reverse").value;
+    usingCustomReversePrompt = false
   } else if (document.getElementById("whichPrompt").value == 3) {
     document.getElementById("prompt-reverse").value = longAndDetailedReversePromptString
+    document.getElementById("promptReverseLabel").innerHTML = "Prompt for prompt reverser:"
+    reverseModelPrompt = document.getElementById("prompt-reverse").value;
+    usingCustomReversePrompt = false
+  } else {
+    document.getElementById("prompt-reverse").value = ""
+    document.getElementById("prompt-reverse").placeholder = "Enter your own reverse prompt here."
+    document.getElementById("promptReverseLabel").innerHTML = "Enter original prompt here: (Use when you know the original prompt for the writing, e.g. in a school setting)"
+    usingCustomReversePrompt = true
   }
 })
 
@@ -91,44 +106,57 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     return;
   }
 
+  if (!document.getElementById("prompt-reverse").value) {
+    resultsBox.textContent = 'Reverse prompt box is empty.';
+    //throw new Error('Failed to get generated prompt');
+    return;
+  }
+
   try {
     //step 0: make /completion request to get the generated "prompt"
     resultsBox.textContent = 'Getting generated prompt...';
     const generatePromptQuery = [
       {
       "role": "user",
-      "content": reverseModelPrompt + inputText
+      "content": document.getElementById("prompt-reverse").value + inputText
       },
     ]
 
-    console.log(reverseModelPrompt + inputText)
+    console.log(document.getElementById("prompt-reverse").value + inputText)
 
-    const generatedPromptResponse = await fetch('http://' + apiLink + '/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-          messages: generatePromptQuery,
-      }),
-    });
+    var fullGeneratedPrompt;
+    var generatedPromptMessage;
 
-    if (!generatedPromptResponse.ok) {
-        throw new Error('Failed to get generated prompt');
+    if(!usingCustomReversePrompt){
+      const generatedPromptResponse = await fetch('http://' + apiLink + '/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            messages: generatePromptQuery,
+        }),
+      });
+
+      if (!generatedPromptResponse.ok) {
+          throw new Error('Failed to get generated prompt');
+      }
+
+      const generatedPromptData = await generatedPromptResponse.json();
+
+      generatedPromptMessage = generatedPromptData.choices[0].message.content
+      console.log(generatedPromptMessage)
+
+      fullGeneratedPrompt = promptTemplate.replace('{promptMessage}', generatedPromptMessage);
+    } else{
+      generatedPromptMessage = document.getElementById("prompt-reverse").value
+      if (!generatedPromptMessage) {
+          resultsBox.textContent = 'Please enter a custom reverse prompt.';
+          //throw new Error('Failed to get generated prompt');
+          return;
+      }
+      fullGeneratedPrompt = promptTemplate.replace('{promptMessage}', generatedPromptMessage);
     }
-
-    const generatedPromptData = await generatedPromptResponse.json();
-
-    //console.log(generatedPromptData)
-
-    const generatedPromptMessage = generatedPromptData.choices[0].message.content
-    console.log(generatedPromptMessage)
-
-    //const fullGeneratedPrompt = `<start_of_turn>user\n${generatedPromptMessage}<end_of_turn>\n<start_of_turn>model\n`
-    //promptTemplate = '<start_of_turn>user\n{promptMessage}<end_of_turn>\n<start_of_turn>model\n'
-    const fullGeneratedPrompt = promptTemplate.replace('{promptMessage}', generatedPromptMessage);
-
-    //console.log(fullGeneratedPrompt)
 
     resultsBox.textContent = 'Tokenizing generated prompt...';
 
@@ -146,9 +174,9 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
 
     const generatedPromptTokenizationData = await tokenizeGeneratedPromptResponse.json();
 
-    //console.log(generatedPromptTokenizationData)
-
     const generatedPromptTokenLength = generatedPromptTokenizationData.tokens.length
+
+    // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
     resultsBox.textContent = 'Tokenizing input text...';
 
@@ -189,7 +217,16 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     var numberSuspiciousZero = 0
     var numberSuspiciousLow = 0
 
+    const startTime = performance.now()
+
     // Step 2: Analyze each token
+
+    //backwards:
+    //for (let i = tokens.length - 1; i >= generatedPromptTokenLength; i--) {
+
+    //forwards:
+    //for (let i = generatedPromptTokenLength; i < tokens.length; i++) {
+
     for (let i = generatedPromptTokenLength; i < tokens.length; i++) {
       const prompt = tokens.slice(0, i).join(''); // All tokens before the current one
       const currentTokenSpaces = tokens[i];
@@ -298,6 +335,10 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
       // Simulate delay for better visualization
       //await new Promise(resolve => setTimeout(resolve, 1));
     }
+
+    const endTime = performance.now()
+
+    console.log(`Analyzing tokens took ${(endTime - startTime) / 1000} seconds`)
 
     // Add click event listeners to tokens in the color-coded box
     document.querySelectorAll('#colorCodedResultsBox .token').forEach(token => {
@@ -460,6 +501,17 @@ function processSuspiciousSequencesLength(arr) {
     return `Average length of sequences of high suspiciousness: ${avgTenLength}\nAverage length of sequences of low suspiciousness: ${avgZeroLength}`;
 }
 
+function toggleReversePromptSettings() {
+  var x = document.getElementById("explanationBox");
+  if (x.style.display === "block") {
+    x.style.display = "none";
+  } else {
+    x.style.display = "block";
+  }
+}
+
+document.getElementById("showReverseSettings").addEventListener("click", toggleReversePromptSettings)
+
 function analyzeParagraphs(tokens, scores, probabilities, initialInput) {
     let paragraphs = [];
     let currentParagraphTokens = [];
@@ -533,7 +585,7 @@ function analyzeParagraphs(tokens, scores, probabilities, initialInput) {
         const paragraphSequenceSuspicious = processSuspiciousSequencesLength(paragraph.scores)
 
         // Append to result string
-        result += `${splitTextParagraphs[i]}\nPercent with suspiciousness of 10: ${percent10.toFixed(2)}%\nPercent with 0 suspiciousness: ${percent0.toFixed(2)}%\nAverage probability: ${avgProb.toFixed(4)}\nAverage suspiciousness: ${averageParagraphScore}\nNumber of instances where 8 tokens in a row had high suspiciousness: ${numberOfParagraphSusStrings}\n${paragraphSequenceSuspicious}\nPercent "slop" words: ${analyzeSlopPercentage(splitTextParagraphs[i]).toFixed(2)}%\n\n\n`;
+        result += `${splitTextParagraphs[i]}\nPercent with suspiciousness of 10: ${percent10.toFixed(2)}%\nPercent with 0 suspiciousness: ${percent0.toFixed(2)}%\nAverage probability: ${avgProb.toFixed(4)}\nAverage suspiciousness: ${averageParagraphScore}\n${paragraphSequenceSuspicious}\nPercent "slop" words: ${analyzeSlopPercentage(splitTextParagraphs[i]).toFixed(2)}%\n\n\n`;
     }
 
     if (paragraphs.length == 1) {
