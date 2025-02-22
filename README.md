@@ -43,4 +43,9 @@ Make the UI look better and move some settings into a more convenient location
 
 
 ### Credits:
-Shoutout to [Sam Peach](https://github.com/sam-paech/antislop-sampler) for providing the "slop" words list.
+[GLTR](https://arxiv.org/abs/1906.04043) provided the basic inspiration for the approach to this project. Consider it to be a more modern implementation with some more features added on. 
+
+
+Also shoutout to [Sam Peach](https://github.com/sam-paech/antislop-sampler) for providing the "slop" words list.
+
+
