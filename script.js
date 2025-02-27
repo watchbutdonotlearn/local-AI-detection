@@ -1,10 +1,10 @@
 var apiLink = "127.0.0.1:8080"
-var promptTemplate = "<<start_of_turn>user\n{promptMessage}<end_of_turn>\n<start_of_turn>model\n"
+var promptTemplate = "<start_of_turn>user\n{promptMessage}<end_of_turn>\n<start_of_turn>model\n"
 document.getElementById("prompt-template").value = promptTemplate //because idk how any other way
 
 const reversePromptStylePreserving = 'You will write a prompt for a language model that will output the following text, including its tone and style. Only output the prompt.\n\n'
 const baseReversePromptString = "You will write a prompt for a language model that will output the following text. Only output the prompt.\n\n"
-const longAndDetailedReversePromptString = "You will write a long and detailed prompt for a language model that will output the following text. Make sure to include the tone and style of the text. Only output the prompt.\n\n"
+const longAndDetailedReversePromptString = "You will write a long and detailed prompt for a language model that will output the following text. Make sure to include the tone and style of the text, as well as specific details from the text. Only output the prompt.\n\n"
 
 var reverseModelPrompt = baseReversePromptString
 document.getElementById("prompt-reverse").value = reverseModelPrompt //because idk how any other way
@@ -200,7 +200,7 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
     const tokens = tokenizeData.tokens.map(token => token.piece); // Extract token pieces
 
     // Array to store suspiciousness scores
-    var suspiciousness = new Array(tokens.length).fill(null); // First token has no score
+    var suspiciousness = new Array(tokens.length).fill(null);
     var topLogprobsList = new Array(tokens.length).fill(null); // Store top logprobs for each token
     var chosenTokenProbList = new Array(tokens.length).fill(null);
 
@@ -291,13 +291,13 @@ document.getElementById('runFullAnalysis').addEventListener('click', async () =>
 
       //modify suspiciousness value depending on how probable the token is
       if (topTokenProbability < 0.05){
-        suspiciousness[i] = suspiciousness[i] - 7
+        suspiciousness[i] = suspiciousness[i] - 5.5
       } else if (topTokenProbability < 0.1){
-        suspiciousness[i] = suspiciousness[i] - 6
+        suspiciousness[i] = suspiciousness[i] - 4.5
       } else if (topTokenProbability < 0.2){
-        suspiciousness[i] = suspiciousness[i] - 3
+        suspiciousness[i] = suspiciousness[i] - 2.5
       } else if (topTokenProbability < 0.3){
-        suspiciousness[i] = suspiciousness[i] - 2
+        suspiciousness[i] = suspiciousness[i] - 1.5
       } else if (topTokenProbability < 0.4){
         suspiciousness[i] = suspiciousness[i] - 1
       }
