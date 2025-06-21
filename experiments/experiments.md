@@ -25,12 +25,15 @@ white
 If the human then wrote the word, say, "the house was the color of sadness", that would be different than the "house was the color magenta". Both would be the same in the current implementation, because both magenta and "of sadness" arent in the list of tokens. Topic perplexity attempts to avoid this.
 
 
-In short, current perplexity based detection methods attempt to discern a difference in word choice from what a human would write. 
+In short, current perplexity based detection methods attempt to discern a difference in word choice or style from what a human would write. This method attempts to discern a difference in what general idea an LLM wishes to convey.
 
 
-This was partially inspired by the (anecdotal) observation that AI tends to almost always try to find happy endings to stories, while generally lacking the same creativity a human does.
+This was partially inspired by the (anecdotal) observation that AI tends to almost always try to find happy endings to stories, while generally lacking the same creativity a human does. On a side note, this detection method does run into a little problem when using a generated reverse prompt. Because the reverse prompt captures the topic of the input text, it reduces the effectiveness of this method. 
+But if using the original prompt (for example, in an academic setting) to analyze the text, it can also be thwarted if the LLM user was smart enough to prompt the LLM with what direction he wants the LLM to take instead of naievely asking the LLM to respond to the prompt.
+Taking the academic setting example, suppose that a history class has an essay prompt "was this historical figure good or bad?" Simply inputting that question into an LLM would probably give you an answer along the lines of "Both viewpoints are valid," while a student might take a hardliner stance on one side. This disrepancy is exactly what topic perplexity aims to measure. But if the student asks the LLM to "argue that the historical figure has done irreperable damage to human society," then this analysis method falls apart.
 
 
+TL;DR: traditional perplexity based approaches (and others) are still better. This doesn't mean this method is useless, rather, it probably needs to be used in conjunction with other methods.
 
 
 ## Sentence Fragment Weighting
