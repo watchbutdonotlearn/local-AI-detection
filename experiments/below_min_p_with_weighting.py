@@ -111,6 +111,8 @@ def update_arrays_with_completion(
 ):
     number_suspicious_low = 0
     number_suspicious = 0
+    number_first_in_sentence_fragment = 0
+    number_first_in_sentence_fragment_and_probzero = 0
 
     for i in range(generated_prompt_token_length, len(tokens)):
         # All tokens before the current one
@@ -186,6 +188,11 @@ def update_arrays_with_completion(
                             # print('suspiciousness i-1:', suspiciousness[i - 1])
                             suspiciousness[i] = -1
 
+        chars = set('!.,:;?\n')
+        if any((c in chars) for c in tokens[i - 1]):
+            number_first_in_sentence_fragment += 1
+
+
         # Ensure suspiciousness is within bounds
         if suspiciousness[i] <= 0:
             suspiciousness[i] = -1
@@ -194,7 +201,8 @@ def update_arrays_with_completion(
             chars = set('!.,:;?\n')
             if any((c in chars) for c in tokens[i - 1]):
                 print(tokens[i - 2], tokens[i - 1], tokens[i], 'is first token in sentence part. upping the weight.')
-                number_suspicious_low += 1
+                number_suspicious_low += .5
+                number_first_in_sentence_fragment_and_probzero += 1
         elif suspiciousness[i] >= 10:
             suspiciousness[i] = 10
             number_suspicious += 1
@@ -202,7 +210,10 @@ def update_arrays_with_completion(
         # Store the chosen token probability
         chosen_token_prob_list[i] = chosen_token_probability
 
-    return suspiciousness, top_logprobs_list, chosen_token_prob_list, number_suspicious_low, number_suspicious
+        # calculate percentage of first tokens in sentence that are prob zero
+        percent_first_in_sentence_probzero = number_first_in_sentence_fragment_and_probzero / number_first_in_sentence_fragment
+
+    return suspiciousness, top_logprobs_list, chosen_token_prob_list, number_suspicious_low, number_suspicious, percent_first_in_sentence_probzero
 
 
 
@@ -281,7 +292,7 @@ def run_analysis(inputText, answer):
         api_link, fullGeneratedReversePrompt, inputText
     )
 
-    updated_suspiciousness, updated_top_logprobs, updated_chosen_probs, num_low, num_high = update_arrays_with_completion(
+    updated_suspiciousness, updated_top_logprobs, updated_chosen_probs, num_low, num_high, percent_first_in_sentence_probzero = update_arrays_with_completion(
         api_link, tokens, generatedPromptTokenLength, suspiciousness, top_logprobs_list, chosen_token_prob_list
     )
 
@@ -311,7 +322,7 @@ def run_analysis(inputText, answer):
     #print("is human:", isHuman)
     #print("expected answer:", answer)
 
-    return isHuman, percent_low, percent_high
+    return isHuman, percent_low, percent_high, percent_first_in_sentence_probzero
 
 def evaluate_analysis(dataset):
     results = []
@@ -327,6 +338,7 @@ def evaluate_analysis(dataset):
         analysis_result_full = run_analysis(input_text, expected_answer)
         analysis_result = analysis_result_full[0]
         analysis_result_percent_low = analysis_result_full[1]
+        percent_first_in_sentence_probzero = analysis_result_full[3]
 
         print("index:", index)
         end = time.time()
@@ -343,7 +355,7 @@ def evaluate_analysis(dataset):
         #percent low, expected answer, is correct, percent high
         if len(entry['input_text'].split()) > 75:
             print('length is above 50 words. Continuing.')
-            results.append([analysis_result_percent_low, expected_answer, is_correct, analysis_result_full[2]])
+            results.append([analysis_result_percent_low, expected_answer, is_correct, analysis_result_full[2], percent_first_in_sentence_probzero])
             results_answers.append(is_correct)
         else:
             print('length is below 50 words, NOT ADDING TO FINAL RESULTS')
@@ -362,23 +374,31 @@ def evaluate_analysis(dataset):
         humanTextsHigh = []
         aiTexts = []
         aiTextsHigh = []
+
+        humanFirstFragment = []
+        aiFirstFragment = []
         for item in results:
             if item[1] == True:
                 humanTexts.append(item[0])
                 humanTextsHigh.append(item[3])
+                humanFirstFragment.append(item[4])
             else:
                 aiTexts.append(item[0])
                 aiTextsHigh.append(item[3])
+                aiFirstFragment.append(item[4])
         if len(humanTexts) > 0:
             print('average percent low score of human text:', sum(humanTexts) / len(humanTexts))
             print('lowest percent low in human text:', min(humanTexts))
             print('bottom 10 percent average for percent low (human):', average_bottom_5_percent(humanTexts))
-            print('average top 10 percent high in human text:', average_top_5(humanTextsHigh))
+            print('top 10 percent average high in human text:', average_top_5(humanTextsHigh))
+            print('average percent first word in sentence frament thats prob zero for human text:', sum(humanFirstFragment) / len(humanFirstFragment))
         if len(aiTexts) > 0:
             print('average percent low score of AI text:', sum(aiTexts) / len(aiTexts))
             print('highest percent low in AI text:', max(aiTexts))
             print('top 10 percent average for percent low (AI):', average_top_5(aiTexts))
-            print('bottom 10 average percent high in AI text:', average_bottom_5_percent(aiTextsHigh))
+            print('bottom 10 percent average high in AI text:', average_bottom_5_percent(aiTextsHigh))
+            print('average percent first word in sentence frament thats prob zero for ai text:', sum(aiFirstFragment) / len(aiFirstFragment))
+        print('-----------------------------------------------------------------------------------------------')
 
     return results
 
@@ -392,7 +412,7 @@ def evaluate_analysis(dataset):
 
 
 
-with open("kaggle-test-250.json", 'r') as f:
+with open("kaggle-test.json", 'r') as f:
     data = json.load(f)
 
 
