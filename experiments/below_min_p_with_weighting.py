@@ -283,8 +283,8 @@ def run_analysis(inputText, answer):
     generate_prompt_query = [{'role': 'user', 'content': f'You will write a prompt for a language model that will output the following text. Make sure to include the tone and style of the text, as well as specific details from the text. Only output the prompt.\n\n{inputText}'}]
 
     fullGeneratedReversePrompt = requestReversePrompt(api_link, generate_prompt_query, prompt_template)
-    # if fullGeneratedReversePrompt:
-    #     print(fullGeneratedReversePrompt)
+    if fullGeneratedReversePrompt:
+        print(fullGeneratedReversePrompt)
 
     generatedPromptTokenLength = tokenize_generated_prompt(api_link, fullGeneratedReversePrompt)
 
@@ -316,7 +316,7 @@ def run_analysis(inputText, answer):
 
     isHuman = False
 
-    if percent_low > 0.25:
+    if percent_low > 0.28:
         isHuman = True
 
     #print("is human:", isHuman)
